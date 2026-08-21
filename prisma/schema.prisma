@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum VideoStatus {
+  DISCOVERED
+  READY
+  FAILED
+  ARCHIVED
+}
+
+enum ProcessingStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  SKIPPED
+}
+
+enum KnowledgeCategory {
+  MODEL
+  TOOL
+  TECHNIQUE
+  PROMPT
+  WORKFLOW
+  API
+  SKILL
+  MCP
+  PLUGIN
+  INFRASTRUCTURE
+  CLAIM
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  VERIFIED
+  REJECTED
+}
+
+enum FactStatus {
+  ACTIVE
+  DEPRECATED
+  REPLACED
+}
+
+enum ChangeType {
+  NEW
+  CHANGED
+  REPEATED
+  CONTRADICTED
+  DEPRECATED
+  REPLACED
+}
+
+model Channel {
+  id               String        @id @default(cuid())
+  youtubeChannelId String        @unique
+  name             String
+  handle           String?
+  url              String
+  description      String?
+  lastIndexedAt    DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  videos           Video[]
+  knowledgeFacts   KnowledgeFact[]
+  changeEvents     ChangeEvent[]
+}
+
+model Video {
+  id               String           @id @default(cuid())
+  youtubeVideoId   String           @unique
+  channelId        String
+  title            String
+  description      String?
+  publishedAt      DateTime?
+  duration         Int?
+  url              String
+  status           VideoStatus      @default(DISCOVERED)
+  classification   String?
+  transcriptStatus ProcessingStatus @default(PENDING)
+  analysisStatus   ProcessingStatus @default(PENDING)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  channel          Channel          @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  transcript       Transcript?
+  analysis         VideoAnalysis?
+  knowledgeFacts   KnowledgeFact[]
+  changeEvents     ChangeEvent[]
+  @@index([channelId, publishedAt])
+}
+
+model Transcript {
+  id             String   @id @default(cuid())
+  videoId        String   @unique
+  source         String
+  language       String
+  rawText        String
+  normalizedText String?
+  segments       Json?
+  fetchedAt      DateTime @default(now())
+  video          Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+}
+
+model VideoAnalysis {
+  id           String   @id @default(cuid())
+  videoId      String   @unique
+  markdown     String
+  summary      String?
+  analyzedAt   DateTime @default(now())
+  model        String
+  promptVersion String
+  video        Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+}
+
+model KnowledgeFact {
+  id               String             @id @default(cuid())
+  channelId        String
+  videoId          String?
+  category         KnowledgeCategory
+  subject          String
+  predicate        String
+  value            Json
+  confidence       Float
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  firstSeenAt      DateTime           @default(now())
+  lastSeenAt       DateTime           @default(now())
+  status           FactStatus         @default(ACTIVE)
+  channel          Channel            @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  video            Video?             @relation(fields: [videoId], references: [id], onDelete: SetNull)
+  @@index([channelId, category, subject])
+}
+
+model ChangeEvent {
+  id            String     @id @default(cuid())
+  channelId     String
+  videoId       String?
+  type          ChangeType
+  subject       String
+  previousValue Json?
+  newValue      Json?
+  explanation   String
+  createdAt     DateTime   @default(now())
+  channel       Channel    @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  video         Video?     @relation(fields: [videoId], references: [id], onDelete: SetNull)
+  @@index([channelId, createdAt])
+}

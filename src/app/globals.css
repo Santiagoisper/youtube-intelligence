@@ -1,0 +1,10 @@
+:root { color-scheme: light; font-family: Arial, sans-serif; color: #172033; background: #f6f7fb; }
+* { box-sizing: border-box; } body { margin: 0; } a { color: inherit; text-decoration: none; }
+.shell { max-width: 1040px; margin: 0 auto; padding: 48px 24px; }
+.muted { color: #667085; } .eyebrow { color: #635bff; font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; box-shadow: 0 3px 12px #1018280a; }
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.button { display: inline-block; background: #172033; color: white; border-radius: 8px; padding: 10px 14px; font-weight: 700; border: none; cursor: pointer; font-size: 14px; }
+.button:disabled { opacity: .5; cursor: not-allowed; }
+.field { flex: 1; min-width: 260px; border: 1px solid #d0d5dd; border-radius: 8px; padding: 10px 12px; font-size: 14px; font-family: inherit; }
+.tabs { display: flex; gap: 18px; border-bottom: 1px solid #e5e7eb; margin: 28px 0; padding-bottom: 12px; color: #667085; }
