@@ -9,14 +9,22 @@ function formatDate(value: Date | null): string | null {
 }
 
 export default async function ChannelsPage() {
-  const channels = await new PrismaChannelIndexStore().listChannels();
+  let channels: Awaited<ReturnType<PrismaChannelIndexStore["listChannels"]>> = [];
+  let dbUnavailable = false;
+  try {
+    channels = await new PrismaChannelIndexStore().listChannels();
+  } catch {
+    dbUnavailable = true;
+  }
   return (
     <main className="shell">
       <p className="eyebrow">Channels</p>
       <h1>Canales</h1>
       <p className="muted">Pegá la URL de un video o de un canal de YouTube para extraer la transcripción.</p>
       <YouTubeExtractor />
-      {channels.length === 0 ? (
+      {dbUnavailable ? (
+        <p className="muted">No se pudo conectar a la base de datos para listar canales.</p>
+      ) : channels.length === 0 ? (
         <p className="muted">Todavía no analizaste ningún canal.</p>
       ) : (
         <section className="grid">
