@@ -12,9 +12,10 @@ interface VideoOutcome {
   filePath?: string;
   reason?: string;
 }
+interface ChannelVideo { youtubeVideoId: string; title: string; url: string; publishedAt?: string; transcriptStatus: string; }
 type ResolveResult =
   | { type: "video"; channel: { id: string; name: string }; video: VideoOutcome }
-  | { type: "channel"; channel: { id: string; name: string; youtubeChannelId: string }; videos: { youtubeVideoId: string; title: string; url: string; publishedAt?: string }[] };
+  | { type: "channel"; channel: { id: string; name: string; youtubeChannelId: string }; videos: ChannelVideo[] };
 
 function formatDate(value?: string): string | null {
   if (!value) return null;
@@ -61,6 +62,7 @@ export function YouTubeExtractor() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [selectedOutcomes, setSelectedOutcomes] = useState<VideoOutcome[]>([]);
   const [fetchingSelected, setFetchingSelected] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
 
   async function handleResolve(event: FormEvent) {
     event.preventDefault();
@@ -70,6 +72,7 @@ export function YouTubeExtractor() {
     setResult(null);
     setSelected(new Set());
     setSelectedOutcomes([]);
+    setProgress(null);
     try {
       const response = await fetch("/api/youtube/resolve", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }) });
       const data = await response.json();
@@ -91,19 +94,28 @@ export function YouTubeExtractor() {
     });
   }
 
-  function toggleAll(videos: { youtubeVideoId: string }[]) {
-    setSelected((previous) => (previous.size === videos.length ? new Set() : new Set(videos.map((video) => video.youtubeVideoId))));
+  function toggleAll(videos: ChannelVideo[]) {
+    const pending = videos.filter((video) => video.transcriptStatus !== "COMPLETED");
+    setSelected((previous) => (pending.every((video) => previous.has(video.youtubeVideoId)) && previous.size === pending.length ? new Set() : new Set(pending.map((video) => video.youtubeVideoId))));
   }
 
   async function handleFetchSelected() {
     if (!selected.size) return;
     setFetchingSelected(true);
     setError(null);
+    const ids = [...selected];
+    setProgress({ done: 0, total: ids.length });
+    setSelectedOutcomes([]);
+    const outcomes: VideoOutcome[] = [];
     try {
-      const response = await fetch("/api/youtube/transcript", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ youtubeVideoIds: [...selected] }) });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? "No se pudieron obtener las transcripciones");
-      setSelectedOutcomes(data.videos as VideoOutcome[]);
+      for (const youtubeVideoId of ids) {
+        const response = await fetch("/api/youtube/transcript", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ youtubeVideoIds: [youtubeVideoId] }) });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error ?? "No se pudieron obtener las transcripciones");
+        outcomes.push(...(data.videos as VideoOutcome[]));
+        setSelectedOutcomes([...outcomes]);
+        setProgress({ done: outcomes.length, total: ids.length });
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error inesperado");
     } finally {
@@ -149,8 +161,12 @@ export function YouTubeExtractor() {
           ) : (
             <>
               <label style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
-                <input type="checkbox" checked={selected.size === result.videos.length} onChange={() => toggleAll(result.videos)} />
-                <span className="muted">Seleccionar todos</span>
+                <input
+                  type="checkbox"
+                  checked={result.videos.some((video) => video.transcriptStatus !== "COMPLETED") && result.videos.filter((video) => video.transcriptStatus !== "COMPLETED").every((video) => selected.has(video.youtubeVideoId))}
+                  onChange={() => toggleAll(result.videos)}
+                />
+                <span className="muted">Seleccionar pendientes</span>
               </label>
               <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 8, maxHeight: 320, overflowY: "auto" }}>
                 {result.videos.map((video) => (
@@ -159,13 +175,14 @@ export function YouTubeExtractor() {
                       <input type="checkbox" checked={selected.has(video.youtubeVideoId)} onChange={() => toggle(video.youtubeVideoId)} />
                       <span>{video.title}</span>
                       {formatDate(video.publishedAt) && <span className="muted" style={{ whiteSpace: "nowrap" }}>— {formatDate(video.publishedAt)}</span>}
+                      {video.transcriptStatus === "COMPLETED" && <span className="muted" style={{ whiteSpace: "nowrap", color: "#16a34a" }}>✓ Ya extraída</span>}
                     </label>
                   </li>
                 ))}
               </ul>
               <p style={{ marginTop: 12 }}>
                 <button className="button" type="button" disabled={!selected.size || fetchingSelected} onClick={handleFetchSelected}>
-                  {fetchingSelected ? "Extrayendo..." : `Traer transcripción (${selected.size})`}
+                  {fetchingSelected && progress ? `Extrayendo ${progress.done}/${progress.total}...` : `Traer transcripción (${selected.size})`}
                 </button>
               </p>
             </>

@@ -6,7 +6,7 @@ import type { IndexedVideo, YouTubeSource, YouTubeVideoSource } from "@/services
 import type { TranscriptStore } from "@/services/youtube/prismaTranscriptStore";
 import { saveTranscriptFile } from "@/services/files/transcriptFile";
 
-export interface DiscoveredVideo { youtubeVideoId: string; title: string; url: string; publishedAt?: Date; }
+export interface DiscoveredVideo { youtubeVideoId: string; title: string; url: string; publishedAt?: Date; transcriptStatus: string; }
 export type ResolveResult =
   | { type: "video"; channel: { id: string; name: string }; video: TranscriptOutcome }
   | { type: "channel"; channel: { id: string; name: string; youtubeChannelId: string }; videos: DiscoveredVideo[] };
@@ -25,7 +25,7 @@ export interface TranscriptOutcome {
 export interface TextExtractionDeps {
   source: YouTubeSource & YouTubeVideoSource;
   channelStore: ChannelIndexStore & {
-    listChannelVideos(channelId: string): Promise<{ id: string; youtubeVideoId: string; title: string; url: string; publishedAt: Date | null }[]>;
+    listChannelVideos(channelId: string): Promise<{ id: string; youtubeVideoId: string; title: string; url: string; publishedAt: Date | null; transcriptStatus: string }[]>;
     findVideoByYoutubeId(youtubeVideoId: string): Promise<{ id: string; youtubeVideoId: string; title: string; url: string; channelId: string; channelName: string } | null>;
     findChannel(channelId: string): Promise<{ id: string; name: string; youtubeChannelId: string } | null>;
   };
@@ -65,7 +65,7 @@ export async function resolveYouTubeUrl(url: string, deps: TextExtractionDeps): 
   return {
     type: "channel",
     channel: channel ?? { id: indexed.channelId, name: channelRef, youtubeChannelId: channelRef },
-    videos: videos.map((video) => ({ youtubeVideoId: video.youtubeVideoId, title: video.title, url: video.url, publishedAt: video.publishedAt ?? undefined }))
+    videos: videos.map((video) => ({ youtubeVideoId: video.youtubeVideoId, title: video.title, url: video.url, publishedAt: video.publishedAt ?? undefined, transcriptStatus: video.transcriptStatus }))
   };
 }
 

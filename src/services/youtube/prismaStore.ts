@@ -41,4 +41,19 @@ export class PrismaChannelIndexStore implements ChannelIndexStore {
   async findChannel(channelId: string) {
     return db.channel.findUnique({ where: { id: channelId }, select: { id: true, name: true, youtubeChannelId: true } });
   }
+
+  async listChannels() {
+    const channels = await db.channel.findMany({
+      orderBy: { lastIndexedAt: "desc" },
+      select: { id: true, name: true, handle: true, youtubeChannelId: true, lastIndexedAt: true, _count: { select: { videos: true } } }
+    });
+    return channels.map((channel) => ({
+      id: channel.id,
+      name: channel.name,
+      handle: channel.handle,
+      youtubeChannelId: channel.youtubeChannelId,
+      lastIndexedAt: channel.lastIndexedAt,
+      videoCount: channel._count.videos
+    }));
+  }
 }
