@@ -1,6 +1,8 @@
 import { PrismaChannelIndexStore } from "@/services/youtube/prismaStore";
 import { YouTubeExtractor } from "./YouTubeExtractor";
 
+export const dynamic = "force-dynamic";
+
 function formatDate(value: Date | null): string | null {
   if (!value) return null;
   return value.toLocaleDateString("es-AR", { year: "numeric", month: "short", day: "numeric" });
