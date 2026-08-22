@@ -23,6 +23,36 @@ function formatDate(value?: string): string | null {
   return date.toLocaleDateString("es-AR", { year: "numeric", month: "short", day: "numeric" });
 }
 
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      title={copied ? "¡Copiado!" : "Copiar ruta"}
+      aria-label="Copiar ruta"
+      style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer", padding: 2, marginLeft: 6, verticalAlign: "middle", color: copied ? "#16a34a" : "#667085" }}
+    >
+      {copied ? (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
+      ) : (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+      )}
+    </button>
+  );
+}
+
 export function YouTubeExtractor() {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
@@ -101,7 +131,7 @@ export function YouTubeExtractor() {
         <div style={{ marginTop: 16 }}>
           <p><strong>{result.video.title}</strong> <span className="muted">— {result.channel.name}</span></p>
           {result.video.status === "AVAILABLE" ? (
-            <p className="muted">Transcripción guardada en <code>{result.video.filePath}</code></p>
+            <p className="muted">Transcripción guardada en <code>{result.video.filePath}</code><CopyButton text={result.video.filePath ?? ""} /></p>
           ) : (
             <p className="muted">No se pudo obtener la transcripción: {result.video.reason}</p>
           )}
@@ -144,7 +174,7 @@ export function YouTubeExtractor() {
             <ul style={{ marginTop: 8, listStyle: "none", padding: 0, display: "grid", gap: 4 }}>
               {selectedOutcomes.map((video) => (
                 <li key={video.youtubeVideoId} className="muted">
-                  {video.title}: {video.status === "AVAILABLE" ? <>guardada en <code>{video.filePath}</code></> : `sin transcripción (${video.reason})`}
+                  {video.title}: {video.status === "AVAILABLE" ? <>guardada en <code>{video.filePath}</code><CopyButton text={video.filePath ?? ""} /></> : `sin transcripción (${video.reason})`}
                 </li>
               ))}
             </ul>
