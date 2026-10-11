@@ -1,7 +1,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { env } from "@/lib/env";
 
-const OUTPUT_ROOT = "C:\\Users\\Santiago\\source\\repos\\Santiagoisper\\YOUTUBE ANALIZER";
+const OUTPUT_ROOT = path.resolve(env.TRANSCRIPT_OUTPUT_DIR);
 
 function sanitize(name: string): string {
   return name.replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 120) || "sin-titulo";

@@ -1,10 +1,17 @@
 import { YouTubeFetchError } from "@/core/errors";
 import type { IndexedChannel, IndexedVideo, YouTubeSource, YouTubeVideoSource } from "./types";
-import { fetchWatchPage } from "./watchPage";
 import { defaultRunYtDlp, type RunYtDlp } from "./ytdlp";
 
 interface PlaylistEntry { id?: string; title?: string; url?: string; timestamp?: number; upload_date?: string; }
 interface PlaylistResult { channel_id?: string; channel?: string; description?: string; entries?: PlaylistEntry[]; }
+interface VideoResult {
+  id?: string;
+  title?: string;
+  channel_id?: string;
+  channel?: string;
+  uploader?: string;
+  webpage_url?: string;
+}
 
 function parseUploadDate(entry: PlaylistEntry): Date | undefined {
   if (entry.timestamp) return new Date(entry.timestamp * 1000);
@@ -30,7 +37,6 @@ function channelVideosUrl(channelRef: string): string {
 
 export class YouTubeHttpSource implements YouTubeSource, YouTubeVideoSource {
   constructor(
-    private readonly fetcher: typeof fetch = fetch,
     private readonly runYtDlp: RunYtDlp = defaultRunYtDlp
   ) {}
 
@@ -65,16 +71,38 @@ export class YouTubeHttpSource implements YouTubeSource, YouTubeVideoSource {
   }
 
   async fetchVideo(input: { videoId: string }): Promise<{ channel: IndexedChannel; video: IndexedVideo }> {
-    const page = await fetchWatchPage(input.videoId, this.fetcher);
+    let stdout: string;
+    try {
+      ({ stdout } = await this.runYtDlp([
+        "--no-warnings",
+        "--no-playlist",
+        "--no-download",
+        "--dump-single-json",
+        `https://www.youtube.com/watch?v=${input.videoId}`
+      ]));
+    } catch (error) {
+      throw new YouTubeFetchError(`No se pudo leer el video ${input.videoId} con yt-dlp`, { cause: error });
+    }
+
+    let data: VideoResult;
+    try {
+      data = JSON.parse(stdout);
+    } catch (error) {
+      throw new YouTubeFetchError(`Respuesta inesperada al leer el video ${input.videoId}`, { cause: error });
+    }
+    if (!data.id || !data.title || !data.channel_id) {
+      throw new YouTubeFetchError(`No se pudo resolver título y canal del video ${input.videoId}`);
+    }
+
     const channel: IndexedChannel = {
-      youtubeChannelId: page.channelId,
-      name: page.channelName,
-      url: `https://www.youtube.com/channel/${page.channelId}`
+      youtubeChannelId: data.channel_id,
+      name: data.channel ?? data.uploader ?? data.channel_id,
+      url: `https://www.youtube.com/channel/${data.channel_id}`
     };
     const video: IndexedVideo = {
-      youtubeVideoId: page.videoId,
-      title: page.title,
-      url: `https://www.youtube.com/watch?v=${page.videoId}`
+      youtubeVideoId: data.id,
+      title: data.title,
+      url: data.webpage_url ?? `https://www.youtube.com/watch?v=${data.id}`
     };
     return { channel, video };
   }

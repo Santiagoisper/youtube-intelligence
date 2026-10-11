@@ -13,7 +13,7 @@ Pegás la URL de un video de YouTube o de un canal y la app extrae la transcripc
 
 ## Cómo funciona por dentro
 
-YouTube bloquea el scraping directo de sus endpoints de subtítulos y de listado de canal para clientes no-browser (devuelven 200 vacío o 404). Por eso la extracción usa [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) como motor — se mantiene activamente actualizado contra esos bloqueos — tanto para listar los videos de un canal como para bajar subtítulos y audio. Los metadatos de un video individual (título, canal) sí se resuelven con un fetch HTTP directo a la página, que no está bloqueado.
+YouTube limita las llamadas directas desde servidores. Por eso la app usa [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) para listar canales, leer los metadatos de videos y descargar subtítulos o audio. YouTube todavía puede aplicar límites temporales a cualquier método de extracción.
 
 Arquitectura del código en `docs/ARCHITECTURE.md`, `docs/PIPELINE_CONTRACTS.md` y `docs/DATA_MODEL.md`.
 
@@ -24,6 +24,8 @@ Arquitectura del código en `docs/ARCHITECTURE.md`, `docs/PIPELINE_CONTRACTS.md`
 - [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) instalado y en el `PATH`
 - `ffmpeg` instalado y en el `PATH` (lo usa `yt-dlp` para extraer/recortar audio)
 - Una API key de [Groq](https://console.groq.com) (opcional para transcripción por IA; hace falta tener habilitados los modelos `whisper-large-v3` / `whisper-large-v3-turbo` en la organización)
+
+Para el despliegue privado en VPS se usa `Dockerfile` y `compose.yaml`. La guía para abrir la app y extraer videos está en [`docs/USO_RAPIDO.md`](docs/USO_RAPIDO.md).
 
 ## Setup
 
@@ -47,6 +49,6 @@ Abrí `http://localhost:3000/channels` y pegá una URL.
 
 ## Notas
 
-- Los archivos de transcripción se guardan en una carpeta configurada en `src/services/files/transcriptFile.ts` — ajustala a tu entorno antes de correr en otra máquina.
+- Los archivos de transcripción se guardan en `TRANSCRIPT_OUTPUT_DIR` (por defecto `./data/transcripts`).
 - El listado de un canal trae hasta 25 videos (los más recientes).
 - Esta app hace llamadas reales a YouTube y, si corresponde, a Groq — no hay stubs en producción.

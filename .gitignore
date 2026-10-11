@@ -3,6 +3,7 @@ node_modules/
 *.tsbuildinfo
 .env
 .env.local
+secrets/
 attached_assets/
 .agents/
 .cache/

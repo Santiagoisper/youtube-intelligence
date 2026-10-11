@@ -1,0 +1,15 @@
+.git
+.env
+.env.*
+secrets
+node_modules
+.next
+.vercel
+.local
+.cache
+.agents
+.config
+.impeccable
+data
+tests
+*.tsbuildinfo
